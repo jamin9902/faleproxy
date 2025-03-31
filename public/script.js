@@ -11,13 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
     urlForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const url = urlInput.value.trim();
+        let url = urlInput.value.trim();
+        
+        // Add http:// protocol if no protocol is specified
+        if (!url.match(/^[a-zA-Z]+:\/\//)) {
+            url = 'http://' + url;
+        }
         
         if (!url) {
             showError('Please enter a valid URL');
             return;
         }
-        
         // Show loading indicator
         loadingElement.classList.remove('hidden');
         resultContainer.classList.add('hidden');
