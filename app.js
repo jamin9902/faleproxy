@@ -26,42 +26,55 @@ app.post('/fetch', async (req, res) => {
     }
 
     // Fetch the content from the provided URL
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      // Prevent circular references in response
+      maxRedirects: 5,
+      validateStatus: status => status < 500
+    });
     const html = response.data;
 
     // Use cheerio to parse HTML and selectively replace text content, not URLs
     const $ = cheerio.load(html);
     
-    // Function to replace text but skip URLs and attributes
-    function replaceYaleWithFale(i, el) {
-      if ($(el).children().length === 0 || $(el).text().trim() !== '') {
-        // Get the HTML content of the element
-        let content = $(el).html();
-        
-        // Only process if it's a text node
-        if (content && $(el).children().length === 0) {
-          // Replace Yale with Fale in text content only
-          content = content.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
-          $(el).html(content);
+        // Process all text nodes in the document (including title and other elements)
+    const processTextNodes = (node) => {
+      if (node.type === 'text') {
+        // Replace Yale with Fale in text content
+        const newText = node.data
+          .replace(/Yale/g, 'Fale')
+          .replace(/yale/g, 'fale')
+          .replace(/YALE/g, 'FALE');
+        node.data = newText;
+      }
+    };
+
+    // Process all elements to replace text content
+    const walkNodes = (parentNode) => {
+      // Process all child nodes
+      $(parentNode).contents().each((i, node) => {
+        // Process text nodes
+        if (node.type === 'text') {
+          processTextNodes(node);
         }
-      }
-    }
+        // Recursively process child elements
+        else if (node.type === 'tag') {
+          walkNodes(node);
+        }
+      });
+    };
+
+    // Walk the entire document
+    walkNodes($.root()[0]);
     
-    // Process text nodes in the body
-    $('body *').contents().filter(function() {
-      return this.nodeType === 3; // Text nodes only
-    }).each(function() {
-      // Replace text content but not in URLs or attributes
-      const text = $(this).text();
-      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
-      if (text !== newText) {
-        $(this).replaceWith(newText);
-      }
-    });
-    
-    // Process title separately
-    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
+    // Process title separately to ensure it's captured
+    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale').replace(/YALE/g, 'FALE');
     $('title').text(title);
+    
+    // Process link text but preserve URLs
+    $('a').each(function() {
+      const linkText = $(this).text();
+      $(this).text(linkText.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale').replace(/YALE/g, 'FALE'));
+    });
     
     return res.json({ 
       success: true, 
