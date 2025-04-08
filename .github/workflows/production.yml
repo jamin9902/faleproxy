@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm run test:ci
+        run: npm test
         # Do not deploy if tests fail
         continue-on-error: false
 
