@@ -6,8 +6,9 @@ env:
 
 on:
   push:
-    - main
-    - master
+    branches:
+      - main
+      - master
 
 jobs:
   test:
